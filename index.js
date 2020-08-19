@@ -17,20 +17,21 @@ const instance = axios.create({
 instance.interceptors.response.use(response => response.data, Promise.reject);
 (async () => {
   const data = await csvToJson().fromFile('./data.csv')
-  console.log('data: ', util.inspect(data, false, null));
+  // console.log('data: ', util.inspect(data, false, null));
   const bar = new ProgressBar(':bar :elapsed secs :percent :eta secs', { total: data.length });
   await Promise.mapSeries(data, (e) => instance.post('/api/edp/students', omit(e, 'id'))
     .then((response) => {
       success.push({
         username: e.username,
-        id: response.data.id
+        id: response.id
       })
       bar.tick()
     })
     .catch((error) => {
-      console.error('error: ', error);
-      console.error([e.first_name, e.last_name].join(' '))
-      failed.push([e.first_name, e.last_name].join(' '))
+      failed.push([{
+        name: [e.first_name, e.last_name].join(' '),
+        error: error.response.data.error
+      }])
       bar.tick()
     }))
   await fs.writeFileAsync('./result.json', JSON.stringify({
